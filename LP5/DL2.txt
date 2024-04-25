@@ -1,0 +1,95 @@
+# Import libraries
+import tensorflow as tf
+from tensorflow.keras.datasets import imdb
+from tensorflow.keras.models import Sequential
+from tensorflow.keras.layers import Dense, Dropout
+
+# Load IMDB dataset
+(x_train, y_train), (x_test, y_test) = imdb.load_data(num_words=10000)
+
+# Preprocess data
+x_train = tf.keras.preprocessing.sequence.pad_sequences(x_train, maxlen=100)
+x_test = tf.keras.preprocessing.sequence.pad_sequences(x_test, maxlen=100)
+
+# Define model
+model = Sequential([
+    Dense(64, activation='relu', input_shape=(100,)),
+    Dropout(0.5),
+    Dense(64, activation='relu'),
+    Dropout(0.5),
+    Dense(1, activation='sigmoid')
+])
+
+# Compile model
+model.compile(optimizer='adam',
+              loss='binary_crossentropy',
+              metrics=['accuracy'])
+
+# Train model
+model.fit(x_train, y_train, epochs=3, batch_size=32, validation_data=(x_test, y_test))
+
+# Evaluate model
+test_loss, test_acc = model.evaluate(x_test, y_test)
+print("Test accuracy:", test_acc)
+
+
+
+
+
+# User input for review
+user_review = input("Enter your movie review: ")
+
+# Tokenize and pad user review
+user_review_sequence = imdb.get_word_index()
+user_review_sequence = [user_review_sequence[word] if word in user_review_sequence and user_review_sequence[word] < 10000 else 0 for word in user_review.split()]
+user_review_sequence = tf.keras.preprocessing.sequence.pad_sequences([user_review_sequence], maxlen=100)
+
+# Predict sentiment
+prediction = model.predict(user_review_sequence)
+
+# Output prediction
+if prediction[0][0] >= 0.5:
+    print("Predicted sentiment: Positive")
+else:
+    print("Predicted sentiment: Negative")
+
+
+
+
+
+shorter : 
+
+import tensorflow as tf
+from tensorflow.keras.datasets import imdb
+from tensorflow.keras.models import Sequential
+from tensorflow.keras.layers import Dense, Dropout, Embedding, Flatten
+
+# Load and preprocess IMDB dataset
+(x_train, y_train), (x_test, y_test) = imdb.load_data(num_words=10000)
+x_train = tf.keras.preprocessing.sequence.pad_sequences(x_train, maxlen=100)
+x_test = tf.keras.preprocessing.sequence.pad_sequences(x_test, maxlen=100)
+
+# Define model
+model = Sequential([
+    Embedding(10000, 16, input_length=100),
+    Flatten(),
+    Dense(64, activation='relu'),
+    Dropout(0.5),
+    Dense(1, activation='sigmoid')
+])
+
+# Compile and train model
+model.compile(optimizer='adam', loss='binary_crossentropy', metrics=['accuracy'])
+model.fit(x_train, y_train, epochs=3, batch_size=32, validation_data=(x_test, y_test))
+
+# Evaluate model
+test_loss, test_acc = model.evaluate(x_test, y_test)
+print("Test accuracy:", test_acc)
+
+# Get user input and predict sentiment
+user_review = input("Enter your movie review: ")
+user_review_sequence = tf.keras.preprocessing.sequence.pad_sequences([imdb.get_word_index()[word] if word in imdb.get_word_index() and imdb.get_word_index()[word] < 10000 else 0 for word in user_review.split()], maxlen=100)
+prediction = model.predict(user_review_sequence)
+
+# Output prediction
+print("Predicted sentiment:", "Positive" if prediction[0][0] >= 0.5 else "Negative")

@@ -1,0 +1,405 @@
+HPC CODE 1 :
+#include <iostream>
+#include <vector>
+#include <queue>
+#include <omp.h>
+
+using namespace std;
+
+void parallel_bfs(vector<vector<int>>& graph, int start) {
+    int num_nodes = graph.size();
+    vector<bool> visited(num_nodes, false);
+    queue<int> q;
+    visited[start] = true;
+    q.push(start);
+
+    while (!q.empty()) {
+        int current = q.front();
+        q.pop();
+        cout << "Visited: " << current << endl;
+        #pragma omp parallel for shared(graph, visited, q)
+        for (int neighbor : graph[current]) {
+            if (!visited[neighbor]) {
+                visited[neighbor] = true;
+                q.push(neighbor);
+            }
+        }
+    }
+}
+
+void dfs_recursive(vector<vector<int>>& graph, int node, vector<bool>& visited) {
+    visited[node] = true;
+    cout << "Visited: " << node << endl;
+    #pragma omp parallel for shared(graph, visited)
+    for (int neighbor : graph[node]) {
+        if (!visited[neighbor]) {
+            dfs_recursive(graph, neighbor, visited);
+        }
+    }
+}
+
+void parallel_dfs(vector<vector<int>>& graph, int start) {
+    int num_nodes = graph.size();
+    vector<bool> visited(num_nodes, false);
+    dfs_recursive(graph, start, visited);
+}
+
+int main() {
+    vector<vector<int>> graph = {
+        {1, 2},
+        {0, 3, 4},
+        {0, 5},
+        {1},
+        {1},
+        {2}
+    };
+
+    int start_node = 0;
+
+    cout << "BFS Traversal:" << endl;
+    parallel_bfs(graph, start_node);
+
+    cout << "DFS Traversal:" << endl;
+    parallel_dfs(graph, start_node);
+
+    return 0;
+}
+
+
+
+
+
+HPC CODE 2 :
+#include <stdio.h>
+#include <omp.h>
+
+// Sequential Bubble Sort
+void bubbleSort(int arr[], int n) {
+    int i, j, temp;
+    for (i = 0; i < n-1; i++) {
+        for (j = 0; j < n-i-1; j++) {
+            if (arr[j] > arr[j+1]) {
+                temp = arr[j];
+                arr[j] = arr[j+1];
+                arr[j+1] = temp;
+            }
+        }
+    }
+}
+
+// Parallel Bubble Sort using OpenMP
+void parallelBubbleSort(int arr[], int n) {
+    int i, j, temp;
+    #pragma omp parallel for private(j, temp)
+    for (i = 0; i < n-1; i++) {
+        for (j = 0; j < n-i-1; j++) {
+            if (arr[j] > arr[j+1]) {
+                temp = arr[j];
+                arr[j] = arr[j+1];
+                arr[j+1] = temp;
+            }
+        }
+    }
+}
+
+// Sequential Merge Sort
+void merge(int arr[], int l, int m, int r) {
+    int i, j, k;
+    int n1 = m - l + 1;
+    int n2 = r - m;
+
+    int L[n1], R[n2];
+
+    for (i = 0; i < n1; i++)
+        L[i] = arr[l + i];
+    for (j = 0; j < n2; j++)
+        R[j] = arr[m + 1 + j];
+
+    i = 0;
+    j = 0;
+    k = l;
+    while (i < n1 && j < n2) {
+        if (L[i] <= R[j]) {
+            arr[k] = L[i];
+            i++;
+        } else {
+            arr[k] = R[j];
+            j++;
+        }
+        k++;
+    }
+
+    while (i < n1) {
+        arr[k] = L[i];
+        i++;
+        k++;
+    }
+
+    while (j < n2) {
+        arr[k] = R[j];
+        j++;
+        k++;
+    }
+}
+
+void sequentialMergeSort(int arr[], int l, int r) {
+    if (l < r) {
+        int m = l + (r - l) / 2;
+
+        sequentialMergeSort(arr, l, m);
+        sequentialMergeSort(arr, m + 1, r);
+
+        merge(arr, l, m, r);
+    }
+}
+
+// Parallel Merge Sort using OpenMP
+void parallelMergeSort(int arr[], int l, int r) {
+    if (l < r) {
+        int m = l + (r - l) / 2;
+
+        #pragma omp parallel sections
+        {
+            #pragma omp section
+            parallelMergeSort(arr, l, m);
+            #pragma omp section
+            parallelMergeSort(arr, m + 1, r);
+        }
+
+        merge(arr, l, m, r);
+    }
+}
+
+int main() {
+    int arr[] = {12, 11, 13, 5, 6, 7};
+    int n = sizeof(arr)/sizeof(arr[0]);
+
+    // Perform sequential bubble sort
+    bubbleSort(arr, n);
+
+    // Perform parallel bubble sort
+    parallelBubbleSort(arr, n);
+
+    // Perform sequential merge sort
+    sequentialMergeSort(arr, 0, n - 1);
+
+    // Perform parallel merge sort
+    parallelMergeSort(arr, 0, n - 1);
+
+    return 0;
+}
+
+
+
+
+HPC CODE 3: 
+#include <iostream>
+#include <vector>
+#include <algorithm>
+#include <omp.h>
+
+struct ReductionResults {
+    int min_val;
+    int max_val;
+    int sum_val;
+    double average_val;
+};
+
+ReductionResults parallel_reduction(const std::vector<int>& data) {
+    ReductionResults results;
+    results.min_val = data[0];
+    results.max_val = data[0];
+    results.sum_val = 0;
+    
+    #pragma omp parallel for reduction(min:results.min_val) reduction(max:results.max_val) reduction(+:results.sum_val)
+    for (size_t i = 0; i < data.size(); ++i) {
+        results.min_val = std::min(results.min_val, data[i]);
+        results.max_val = std::max(results.max_val, data[i]);
+        results.sum_val += data[i];
+    }
+    
+    results.average_val = static_cast<double>(results.sum_val) / data.size();
+    
+    return results;
+}
+
+int main() {
+    std::vector<int> data = {5, 10, 15, 20, 25, 30, 35, 40};
+    ReductionResults results = parallel_reduction(data);
+    
+    std::cout << "Minimum: " << results.min_val << std::endl;
+    std::cout << "Maximum: " << results.max_val << std::endl;
+    std::cout << "Sum: " << results.sum_val << std::endl;
+    std::cout << "Average: " << results.average_val << std::endl;
+    
+    return 0;
+}
+
+
+
+
+
+
+CU CODES : 
+# ass4 addition of two large vector
+%%writefile ass4twolargevector.cu
+
+
+#include <iostream>
+using namespace std;
+
+__global__ void add(int* A, int* B, int* C, int size) {
+    int tid = blockIdx.x * blockDim.x + threadIdx.x;
+    if (tid < size) {
+        C[tid] = A[tid] + B[tid];
+    }
+}
+
+void initialize(int* vector, int size) {
+    for (int i = 0; i < size; i++) {
+        vector[i] = rand() % 10;
+    }
+}
+
+void print(int* vector, int size) {
+    for (int i = 0; i < size; i++) {
+        cout << vector[i] << " ";
+    }
+    cout << endl;
+}
+
+int main() {
+    int N = 4;
+    int* A, * B, * C;
+    int vectorSize = N;
+    size_t vectorBytes = vectorSize * sizeof(int);
+
+    A = new int[vectorSize];
+    B = new int[vectorSize];
+    C = new int[vectorSize];
+
+    initialize(A, vectorSize);
+    initialize(B, vectorSize);
+
+    cout << "Vector A: ";
+    print(A, N);
+    cout << "Vector B: ";
+    print(B, N);
+
+    int* X, * Y, * Z;
+    cudaMalloc(&X, vectorBytes);
+    cudaMalloc(&Y, vectorBytes);
+    cudaMalloc(&Z, vectorBytes);
+
+    cudaMemcpy(X, A, vectorBytes, cudaMemcpyHostToDevice);
+    cudaMemcpy(Y, B, vectorBytes, cudaMemcpyHostToDevice);
+
+    int threadsPerBlock = 256;
+    int blocksPerGrid = (N + threadsPerBlock - 1) / threadsPerBlock;
+    add<<<blocksPerGrid, threadsPerBlock>>>(X, Y, Z, N);
+
+    cudaMemcpy(C, Z, vectorBytes, cudaMemcpyDeviceToHost);
+
+    cout << "Addition: ";
+    print(C, N);
+
+    delete[] A;
+    delete[] B;
+    delete[] C;
+    cudaFree(X);
+    cudaFree(Y);
+    cudaFree(Z);
+
+    return 0;
+}
+
+
+
+
+
+# ass 4 matrix multiplication
+%%writefile ass4matrixmultiplication.cu
+
+
+// matrix_multiplication.cu
+
+#include <iostream>
+using namespace std;
+
+__global__ void multiply(int* A, int* B, int* C, int size) {
+    int row = blockIdx.y * blockDim.y + threadIdx.y;
+    int col = blockIdx.x * blockDim.x + threadIdx.x;
+
+    if (row < size && col < size) {
+        int sum = 0;
+        for (int i = 0; i < size; i++) {
+            sum += A[row * size + i] * B[i * size + col];
+        }
+        C[row * size + col] = sum;
+    }
+}
+
+int main() {
+    const int N = 2;
+    const int matrixSize = N * N;
+    const size_t matrixBytes = matrixSize * sizeof(int);
+
+    int* A, * B, * C;
+    A = new int[matrixSize];
+    B = new int[matrixSize];
+    C = new int[matrixSize];
+
+    // Initialize matrices A and B
+    for (int i = 0; i < matrixSize; i++) {
+        A[i] = rand() % 10;
+        B[i] = rand() % 10;
+    }
+
+    // Print matrices A and B
+    cout << "Matrix A: \n";
+    for (int i = 0; i < matrixSize; i++) {
+        cout << A[i] << " ";
+        if ((i + 1) % N == 0) cout << endl;
+    }
+    cout << endl;
+
+    cout << "Matrix B: \n";
+    for (int i = 0; i < matrixSize; i++) {
+        cout << B[i] << " ";
+        if ((i + 1) % N == 0) cout << endl;
+    }
+    cout << endl;
+
+    int* d_A, * d_B, * d_C;
+    cudaMalloc(&d_A, matrixBytes);
+    cudaMalloc(&d_B, matrixBytes);
+    cudaMalloc(&d_C, matrixBytes);
+
+    cudaMemcpy(d_A, A, matrixBytes, cudaMemcpyHostToDevice);
+    cudaMemcpy(d_B, B, matrixBytes, cudaMemcpyHostToDevice);
+
+    dim3 threadsPerBlock(16, 16);
+    dim3 numBlocks((N + 15) / 16, (N + 15) / 16);
+
+    multiply<<<numBlocks, threadsPerBlock>>>(d_A, d_B, d_C, N);
+
+    cudaMemcpy(C, d_C, matrixBytes, cudaMemcpyDeviceToHost);
+
+    // Print result matrix C
+    cout << "Result Matrix C: \n";
+    for (int i = 0; i < matrixSize; i++) {
+        cout << C[i] << " ";
+        if ((i + 1) % N == 0) cout << endl;
+    }
+    cout << endl;
+
+    delete[] A;
+    delete[] B;
+    delete[] C;
+    cudaFree(d_A);
+    cudaFree(d_B);
+    cudaFree(d_C);
+
+    return 0;
+}
+

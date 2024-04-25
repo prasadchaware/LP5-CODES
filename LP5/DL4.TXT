@@ -1,0 +1,69 @@
+# Importing necessary libraries
+import numpy as np
+import pandas as pd
+import matplotlib.pyplot as plt
+from sklearn.preprocessing import MinMaxScaler
+from tensorflow.keras.models import Sequential
+from tensorflow.keras.layers import LSTM, Dense
+
+# Load the dataset from GitHub
+url = "https://raw.githubusercontent.com/Parasgr7/Google-Stock-Price-Prediction/master/Google_Stock_Price_Train.csv"
+df = pd.read_csv(url)
+
+# Preprocessing: Remove double quotes from "Close" column
+df['Close'] = df['Close'].str.replace('"', '')
+
+# Convert "Close" column to numeric
+df['Close'] = pd.to_numeric(df['Close'], errors='coerce')
+
+# Drop rows with NaN values
+df.dropna(inplace=True)
+
+# Preprocessing continued
+data = df['Close'].values.reshape(-1, 1)
+scaler = MinMaxScaler()
+data = scaler.fit_transform(data)
+
+# Splitting data into training and testing sets
+train_size = int(len(data) * 0.8)
+train_data, test_data = data[:train_size], data[train_size:]
+
+# Function to create sequences for RNN
+def create_sequences(data, seq_length):
+    X, y = [], []
+    for i in range(len(data) - seq_length):
+        X.append(data[i:i + seq_length])
+        y.append(data[i + seq_length])
+    return np.array(X), np.array(y)
+
+# Define sequence length
+seq_length = 10
+
+# Creating sequences for training and testing
+X_train, y_train = create_sequences(train_data, seq_length)
+X_test, y_test = create_sequences(test_data, seq_length)
+
+# Building the RNN model
+model = Sequential([
+    LSTM(units=50, input_shape=(X_train.shape[1], X_train.shape[2])),
+    Dense(units=1)
+])
+
+# Compile the model
+model.compile(optimizer='adam', loss='mean_squared_error')
+
+# Train the model
+model.fit(X_train, y_train, epochs=10, batch_size=32)
+
+# Evaluate the model
+loss = model.evaluate(X_test, y_test)
+print("Test Loss:", loss)
+
+# Making predictions
+predictions = model.predict(X_test)
+
+# Plotting the results
+plt.plot(y_test, label='True')
+plt.plot(predictions, label='Predicted')
+plt.legend()
+plt.show()

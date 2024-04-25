@@ -1,0 +1,38 @@
+import numpy as np
+import pandas as pd
+import tensorflow as tf
+from sklearn.model_selection import train_test_split
+
+# Load your dataset here
+df = pd.read_csv('your_dataset.csv')
+
+# Assuming you have features X and target y
+X = df.drop('target_column_name', axis=1).values
+y = df['target_column_name'].values
+
+# Split the dataset into training and testing sets
+X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
+
+# Define the model with more layers
+model = tf.keras.Sequential([
+    tf.keras.layers.Dense(64, input_shape=(X_train.shape[1],), activation='relu'),
+    tf.keras.layers.Dense(32, activation='relu'),
+    tf.keras.layers.Dense(1)
+])
+
+# Compile the model
+model.compile(optimizer='adam', loss='mean_squared_error')
+
+# Train the model
+model.fit(X_train, y_train, epochs=100, verbose=0)
+
+# Evaluate the model
+mse = model.evaluate(X_test, y_test)
+print("Mean Squared Error:", mse)
+
+# Predict using the trained model
+predictions = model.predict(X_test)
+
+# Display some predictions and actual values
+for i in range(5):  # Displaying the first 5 predictions
+    print("Predicted:", predictions[i][0], "\tActual:", y_test[i])
